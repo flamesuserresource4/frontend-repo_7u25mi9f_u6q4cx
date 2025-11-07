@@ -3,13 +3,17 @@ import Login from './components/Login';
 import SectionLayout from './components/SectionLayout';
 import HomeDashboard from './components/HomeDashboard';
 import Billing from './components/Billing';
+import Employees from './components/Employees';
+import Sales from './components/Sales';
+import Stock from './components/Stock';
+import Delivery from './components/Delivery';
 
-const ALL_MODULES = ['Home','Billing'];
+const ALL_MODULES = ['Home', 'Billing', 'Employees', 'Sales', 'Stock', 'Delivery'];
 
 const roleAccess = {
-  admin: ALL_MODULES,
-  manager: ALL_MODULES,
-  cashier: ['Home','Billing'],
+  admin: ALL_MODULES, // Admin can access everything
+  manager: ['Home', 'Billing'],
+  cashier: ['Home', 'Billing'],
   stock_manager: ['Home'],
 };
 
@@ -44,6 +48,18 @@ export default function App() {
 
   if (section === 'Billing') {
     return <Billing onBackHome={onBackHome} onLogout={onLogout} user={user} onRoleChange={onRoleChange} />;
+  }
+  if (section === 'Employees') {
+    return <Employees onBackHome={onBackHome} onLogout={onLogout} user={user} onRoleChange={onRoleChange} />;
+  }
+  if (section === 'Sales') {
+    return <Sales onBackHome={onBackHome} onLogout={onLogout} user={user} onRoleChange={onRoleChange} />;
+  }
+  if (section === 'Stock') {
+    return <Stock onBackHome={onBackHome} onLogout={onLogout} user={user} onRoleChange={onRoleChange} />;
+  }
+  if (section === 'Delivery') {
+    return <Delivery onBackHome={onBackHome} onLogout={onLogout} user={user} onRoleChange={onRoleChange} />;
   }
 
   return null;

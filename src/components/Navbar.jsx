@@ -10,47 +10,34 @@ const roles = [
 
 export default function Navbar({ title, tabs, activeTab, onTabChange, onBackHome, onLogout, user, onRoleChange }) {
   return (
-    <header className="relative w-full bg-white border-b border-emerald-100">
+    <header className="w-full bg-white/90 backdrop-blur border-b border-emerald-100">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        {/* Brand + Quarter Circle */}
-        <div className="relative flex items-center gap-3">
-          {/* Quarter-square background */}
-          <div className="relative h-56 w-56 rounded-br-full bg-emerald-600 overflow-hidden">
-            <div className="absolute inset-0 p-4 pointer-events-none flex flex-col">
-              {/* Logo and name */}
-              <div className="flex items-center gap-2 text-white font-semibold">
-                {/* Simple leaf-like logo */}
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M4 13c6 0 9-3 9-9 0 0 7 5 7 12a7 7 0 0 1-7 7c-7 0-9-7-9-10z" fill="currentColor"/>
-                </svg>
-                <span className="text-lg tracking-wide">FRESH PICK</span>
-              </div>
-              <span className="mt-1 text-white/80 text-xs leading-snug max-w-[12rem]">
-                smart management, seamless operations
-              </span>
-            </div>
+        {/* Brand */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-emerald-700 font-semibold">
+            {/* Simple leaf-like logo */}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 13c6 0 9-3 9-9 0 0 7 5 7 12a7 7 0 0 1-7 7c-7 0-9-7-9-10z" />
+            </svg>
+            <span className="tracking-wide">FRESH PICK</span>
           </div>
-          <div className="ml-2">
-            <h1 className="text-xl font-semibold text-emerald-800">{title}</h1>
-            <div className="mt-1 flex items-center gap-2 text-sm text-emerald-700">
-              <button onClick={onBackHome} className="inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-emerald-50">
-                <Home size={16} /> Home
-              </button>
-              <span className="text-emerald-300">|</span>
-              <button onClick={onLogout} className="inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-emerald-50">
-                <LogOut size={16} /> Logout
-              </button>
-            </div>
-          </div>
+          <span className="text-sm text-emerald-500">|</span>
+          <h1 className="text-base font-medium text-emerald-900">{title}</h1>
         </div>
 
-        {/* User avatar and role */}
-        <div className="flex items-center gap-3">
+        {/* Actions */}
+        <div className="flex items-center gap-4">
+          <button onClick={onBackHome} className="inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-emerald-50 text-emerald-700">
+            <Home size={16} /> Home
+          </button>
+          <button onClick={onLogout} className="inline-flex items-center gap-1 px-2 py-1 rounded hover:bg-rose-50 text-rose-600">
+            <LogOut size={16} /> Logout
+          </button>
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-700">
               <User size={18} />
             </div>
-            <div className="leading-tight">
+            <div className="leading-tight hidden sm:block">
               <div className="text-sm font-medium text-emerald-900">{user?.name || 'User'}</div>
               <div className="text-xs text-emerald-600 capitalize">{user?.role || 'guest'}</div>
             </div>
