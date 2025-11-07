@@ -35,7 +35,7 @@ export default function App() {
   const [section, setSection] = useState('home');
 
   // Tabs per section
-  const [deliveryTab, setDeliveryTab] = useState('Daily Entries'); // default as requested
+  const [deliveryTab, setDeliveryTab] = useState('Daily Entries');
 
   const handleLogout = () => {
     setUser(null);
@@ -57,6 +57,21 @@ export default function App() {
     { supplier_id: 'S-1001', product_id: 'P-2001', expiry_date: '2026-02-10', quantity: 24, selling_price: 1.8, cost_price: 1.2 },
     { supplier_id: 'S-1002', product_id: 'P-2002', expiry_date: '2025-12-01', quantity: 18, selling_price: 2.9, cost_price: 2.2 },
   ]);
+
+  // Basic stock snapshot for dashboard widgets
+  const [stockItems] = useState([
+    { product_id: 'P-2001', name: 'Gala Apples', quantity: 8, reorder_level: 10 },
+    { product_id: 'P-2002', name: 'Whole Milk 1L', quantity: 42, reorder_level: 20 },
+    { product_id: 'P-2003', name: 'Brown Bread', quantity: 5, reorder_level: 12 },
+    { product_id: 'P-2004', name: 'Free-range Eggs', quantity: 16, reorder_level: 15 },
+  ]);
+
+  const [deliveriesSchedule] = useState([
+    { supplier: 'Fresh Farms', eta_date: new Date().toISOString().slice(0, 10), items: 5 },
+    { supplier: 'Dairy Best', eta_date: new Date(Date.now() + 24*60*60*1000).toISOString().slice(0, 10), items: 3 },
+  ]);
+
+  const [salesToday] = useState({ amount: 1243.5, orders: 87 });
 
   // Supplier modal state
   const [supplierModalOpen, setSupplierModalOpen] = useState(false);
@@ -138,8 +153,77 @@ export default function App() {
     }
   };
 
-  // Render sections (we only adjust Delivery per request)
+  // Derived dashboard data
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const expiringSoon = useMemo(() => {
+    const now = new Date();
+    const inTwoDays = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
+    return entries.filter((e) => {
+      const d = new Date(e.expiry_date);
+      return d >= now && d <= inTwoDays;
+    });
+  }, [entries]);
+
+  const lowStock = useMemo(() => stockItems.filter((s) => s.quantity <= s.reorder_level), [stockItems]);
+  const todaysDeliveries = useMemo(() => deliveriesSchedule.filter((d) => d.eta_date === todayStr), [deliveriesSchedule, todayStr]);
+
+  // Render sections
   switch (section) {
+    case 'dashboard':
+      return (
+        <SectionLayout
+          title="Dashboard"
+          onBackHome={goHome}
+          onLogout={handleLogout}
+        >
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl border bg-white p-4">
+              <h3 className="mb-2 text-sm font-semibold text-gray-700">Expiring in 2 days</h3>
+              <div className="space-y-2">
+                {expiringSoon.length === 0 && <p className="text-sm text-gray-500">No products nearing expiry</p>}
+                {expiringSoon.slice(0,5).map((e, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-md bg-emerald-50 px-3 py-2 text-sm">
+                    <span className="font-medium text-emerald-900">{e.product_id}</span>
+                    <span className="text-emerald-800">{e.expiry_date}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-xl border bg-white p-4">
+              <h3 className="mb-2 text-sm font-semibold text-gray-700">Low stock alerts</h3>
+              <div className="space-y-2">
+                {lowStock.length === 0 && <p className="text-sm text-gray-500">All items above threshold</p>}
+                {lowStock.slice(0,5).map((s) => (
+                  <div key={s.product_id} className="flex items-center justify-between rounded-md bg-orange-50 px-3 py-2 text-sm">
+                    <span className="font-medium text-orange-900">{s.name}</span>
+                    <span className="text-orange-800">{s.quantity} in stock</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-xl border bg-white p-4">
+              <h3 className="mb-2 text-sm font-semibold text-gray-700">Today’s sales</h3>
+              <div className="rounded-lg bg-emerald-600 p-4 text-white">
+                <div className="text-3xl font-extrabold">${salesToday.amount.toFixed(2)}</div>
+                <div className="text-sm font-semibold opacity-90">{salesToday.orders} orders</div>
+              </div>
+            </div>
+            <div className="rounded-xl border bg-white p-4">
+              <h3 className="mb-2 text-sm font-semibold text-gray-700">Deliveries today</h3>
+              <div className="space-y-2">
+                {todaysDeliveries.length === 0 && <p className="text-sm text-gray-500">No deliveries scheduled</p>}
+                {todaysDeliveries.slice(0,5).map((d, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-md bg-sky-50 px-3 py-2 text-sm">
+                    <span className="font-medium text-sky-900">{d.supplier}</span>
+                    <span className="text-sky-800">{d.items} items</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </SectionLayout>
+      );
+
     case 'delivery':
       return (
         <SectionLayout
@@ -155,7 +239,7 @@ export default function App() {
               <SectionHeader
                 title="Daily Delivery Entries"
                 actions={(
-                  <button onClick={openAddEntry} className="inline-flex items-center gap-2 rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800">
+                  <button onClick={openAddEntry} className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700">
                     <Plus className="h-4 w-4"/> Add Entry
                   </button>
                 )}
@@ -230,7 +314,7 @@ export default function App() {
               <SectionHeader
                 title="Suppliers Info"
                 actions={(
-                  <button onClick={openAddSupplier} className="inline-flex items-center gap-2 rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800">
+                  <button onClick={openAddSupplier} className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700">
                     <Plus className="h-4 w-4"/> Add Supplier
                   </button>
                 )}
