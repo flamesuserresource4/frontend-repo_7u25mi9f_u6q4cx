@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock } from 'lucide-react';
+import { Lock, Info } from 'lucide-react';
 
 const USERS = [
   { username: 'admin', password: 'admin', name: 'Aisha Khan', role: 'admin' },
@@ -27,14 +27,26 @@ export default function Login({ onLogin }) {
           <Lock />
           <h2 className="font-semibold text-lg">Sign in</h2>
         </div>
+        <div className="mb-4 flex items-start gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-md p-3">
+          <Info className="shrink-0 mt-0.5" size={14} />
+          <div>
+            <div className="font-medium">Demo accounts</div>
+            <ul className="list-disc ml-4 mt-1 space-y-0.5">
+              <li>admin / admin</li>
+              <li>manager / manager</li>
+              <li>cashier / cashier</li>
+              <li>stock / stock</li>
+            </ul>
+          </div>
+        </div>
         <form onSubmit={submit} className="space-y-3">
           <div>
-            <label className="text-xs text-emerald-700">Username</label>
-            <input value={username} onChange={(e)=>setUsername(e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" placeholder="Enter username" />
+            <label htmlFor="username" className="text-xs text-emerald-700">Username</label>
+            <input id="username" value={username} onChange={(e)=>setUsername(e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" placeholder="Enter username" autoComplete="username" />
           </div>
           <div>
-            <label className="text-xs text-emerald-700">Password</label>
-            <input type="password" value={password} onChange={(e)=>setPassword(e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" placeholder="Enter password" />
+            <label htmlFor="password" className="text-xs text-emerald-700">Password</label>
+            <input id="password" type="password" value={password} onChange={(e)=>setPassword(e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300" placeholder="Enter password" autoComplete="current-password" />
           </div>
           {error && <div className="text-xs text-red-600">{error}</div>}
           <button type="submit" className="w-full mt-2 bg-emerald-600 text-white rounded-md py-2 text-sm hover:bg-emerald-700">Login</button>
