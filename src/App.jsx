@@ -5,24 +5,24 @@ import SectionLayout from './components/SectionLayout';
 import Modal from './components/Modal';
 import { Edit2, Trash2, Plus } from 'lucide-react';
 
-const Row = ({ item, onEdit, onDelete, fields }) => {
-  return (
-    <div className="grid grid-cols-12 items-center gap-4 rounded-lg border bg-white p-3">
-      {fields.map((f, idx) => (
-        <div key={idx} className="col-span-2 truncate text-sm text-gray-800">{item[f] ?? '-'}</div>
-      ))}
-      <div className="col-span-2 flex justify-end gap-2">
-        <button onClick={() => onEdit(item)} className="inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">
-          <Edit2 className="mr-1 h-4 w-4"/> Edit
-        </button>
-        <button onClick={() => onDelete(item)} className="inline-flex items-center rounded-md bg-rose-600 px-2 py-1 text-xs font-medium text-white hover:bg-rose-700">
-          <Trash2 className="mr-1 h-4 w-4"/> Delete
-        </button>
-      </div>
+// Row item for list views
+const Row = ({ item, onEdit, onDelete, fields }) => (
+  <div className="grid grid-cols-12 items-center gap-4 rounded-lg border bg-white p-3">
+    {fields.map((f, idx) => (
+      <div key={idx} className="col-span-2 truncate text-sm text-gray-800">{item[f] ?? '-'}</div>
+    ))}
+    <div className="col-span-2 flex justify-end gap-2">
+      <button onClick={() => onEdit(item)} className="inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">
+        <Edit2 className="mr-1 h-4 w-4"/> Edit
+      </button>
+      <button onClick={() => onDelete(item)} className="inline-flex items-center rounded-md bg-rose-600 px-2 py-1 text-xs font-medium text-white hover:bg-rose-700">
+        <Trash2 className="mr-1 h-4 w-4"/> Delete
+      </button>
     </div>
-  );
-};
+  </div>
+);
 
+// Section header with actions
 const SectionHeader = ({ title, actions }) => (
   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
     <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
@@ -31,23 +31,14 @@ const SectionHeader = ({ title, actions }) => (
 );
 
 export default function App() {
+  // Authentication + navigation (hooks must be declared before any return)
   const [user, setUser] = useState(null);
   const [section, setSection] = useState('home');
 
-  // Tabs per section
+  // Delivery module UI state
   const [deliveryTab, setDeliveryTab] = useState('Daily Entries');
 
-  const handleLogout = () => {
-    setUser(null);
-    setSection('home');
-  };
-
-  if (!user) return <Login onLogin={setUser} />;
-  if (section === 'home') return <HomeDashboard onSelect={setSection} />;
-
-  const goHome = () => setSection('home');
-
-  // Delivery state (local demo data for now)
+  // Demo data for Delivery
   const [suppliers, setSuppliers] = useState([
     { supplier_id: 'S-1001', supplier_name: 'Fresh Farms', contact_no: '555-0123', category: 'Produce' },
     { supplier_id: 'S-1002', supplier_name: 'Dairy Best', contact_no: '555-0456', category: 'Dairy' },
@@ -58,19 +49,17 @@ export default function App() {
     { supplier_id: 'S-1002', product_id: 'P-2002', expiry_date: '2025-12-01', quantity: 18, selling_price: 2.9, cost_price: 2.2 },
   ]);
 
-  // Basic stock snapshot for dashboard widgets
+  // Dashboard demo data
   const [stockItems] = useState([
     { product_id: 'P-2001', name: 'Gala Apples', quantity: 8, reorder_level: 10 },
     { product_id: 'P-2002', name: 'Whole Milk 1L', quantity: 42, reorder_level: 20 },
     { product_id: 'P-2003', name: 'Brown Bread', quantity: 5, reorder_level: 12 },
     { product_id: 'P-2004', name: 'Free-range Eggs', quantity: 16, reorder_level: 15 },
   ]);
-
   const [deliveriesSchedule] = useState([
     { supplier: 'Fresh Farms', eta_date: new Date().toISOString().slice(0, 10), items: 5 },
     { supplier: 'Dairy Best', eta_date: new Date(Date.now() + 24*60*60*1000).toISOString().slice(0, 10), items: 3 },
   ]);
-
   const [salesToday] = useState({ amount: 1243.5, orders: 87 });
 
   // Supplier modal state
@@ -79,18 +68,42 @@ export default function App() {
   const emptySupplier = { supplier_id: '', supplier_name: '', contact_no: '', category: '' };
   const [supplierForm, setSupplierForm] = useState(emptySupplier);
 
+  // Entry modal state
+  const [entryModalOpen, setEntryModalOpen] = useState(false);
+  const [editingEntryIndex, setEditingEntryIndex] = useState(null);
+  const emptyEntry = { supplier_id: '', product_id: '', expiry_date: '', quantity: 0, selling_price: 0, cost_price: 0 };
+  const [entryForm, setEntryForm] = useState(emptyEntry);
+
+  // Derived dashboard values
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const expiringSoon = useMemo(() => {
+    const now = new Date();
+    const inTwoDays = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
+    return entries.filter((e) => {
+      const d = new Date(e.expiry_date);
+      return d >= now && d <= inTwoDays;
+    });
+  }, [entries]);
+  const lowStock = useMemo(() => stockItems.filter((s) => s.quantity <= s.reorder_level), [stockItems]);
+  const todaysDeliveries = useMemo(() => deliveriesSchedule.filter((d) => d.eta_date === todayStr), [deliveriesSchedule, todayStr]);
+
+  // Event handlers
+  const handleLogout = () => {
+    setUser(null);
+    setSection('home');
+  };
+  const goHome = () => setSection('home');
+
   const openAddSupplier = () => {
     setEditingSupplierId(null);
     setSupplierForm(emptySupplier);
     setSupplierModalOpen(true);
   };
-
   const openEditSupplier = (item) => {
     setEditingSupplierId(item.supplier_id);
     setSupplierForm({ ...item });
     setSupplierModalOpen(true);
   };
-
   const saveSupplier = () => {
     if (!supplierForm.supplier_id || !supplierForm.supplier_name) return;
     setSuppliers((prev) => {
@@ -102,32 +115,23 @@ export default function App() {
     });
     setSupplierModalOpen(false);
   };
-
   const deleteSupplier = (item) => {
     if (confirm(`Delete supplier ${item.supplier_name}?`)) {
       setSuppliers((prev) => prev.filter((s) => s.supplier_id !== item.supplier_id));
     }
   };
 
-  // Delivery entry modal state
-  const [entryModalOpen, setEntryModalOpen] = useState(false);
-  const [editingEntryIndex, setEditingEntryIndex] = useState(null);
-  const emptyEntry = { supplier_id: '', product_id: '', expiry_date: '', quantity: 0, selling_price: 0, cost_price: 0 };
-  const [entryForm, setEntryForm] = useState(emptyEntry);
-
   const openAddEntry = () => {
     setEditingEntryIndex(null);
     setEntryForm(emptyEntry);
     setEntryModalOpen(true);
   };
-
   const openEditEntry = (item) => {
     const index = entries.findIndex((e) => e === item);
     setEditingEntryIndex(index);
     setEntryForm({ ...item });
     setEntryModalOpen(true);
   };
-
   const saveEntry = () => {
     if (!entryForm.supplier_id || !entryForm.product_id) return;
     const normalized = {
@@ -146,36 +150,20 @@ export default function App() {
     });
     setEntryModalOpen(false);
   };
-
   const deleteEntry = (item) => {
     if (confirm(`Delete entry for product ${item.product_id}?`)) {
       setEntries((prev) => prev.filter((e) => e !== item));
     }
   };
 
-  // Derived dashboard data
-  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const expiringSoon = useMemo(() => {
-    const now = new Date();
-    const inTwoDays = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
-    return entries.filter((e) => {
-      const d = new Date(e.expiry_date);
-      return d >= now && d <= inTwoDays;
-    });
-  }, [entries]);
+  // Render
+  if (!user) return <Login onLogin={setUser} />;
+  if (section === 'home') return <HomeDashboard onSelect={setSection} />;
 
-  const lowStock = useMemo(() => stockItems.filter((s) => s.quantity <= s.reorder_level), [stockItems]);
-  const todaysDeliveries = useMemo(() => deliveriesSchedule.filter((d) => d.eta_date === todayStr), [deliveriesSchedule, todayStr]);
-
-  // Render sections
   switch (section) {
     case 'dashboard':
       return (
-        <SectionLayout
-          title="Dashboard"
-          onBackHome={goHome}
-          onLogout={handleLogout}
-        >
+        <SectionLayout title="Dashboard" onBackHome={goHome} onLogout={handleLogout}>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-xl border bg-white p-4">
               <h3 className="mb-2 text-sm font-semibold text-gray-700">Expiring in 2 days</h3>
