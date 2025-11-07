@@ -3,15 +3,20 @@ import Login from './components/Login';
 import HomeDashboard from './components/HomeDashboard';
 import SectionLayout from './components/SectionLayout';
 import Modal from './components/Modal';
-import { Edit2, Trash2, Plus } from 'lucide-react';
+import { Edit2, Trash2, Plus, AlertTriangle } from 'lucide-react';
 
-// Row item for list views
-const Row = ({ item, onEdit, onDelete, fields }) => (
+// Row item for list views with optional alert icon
+const Row = ({ item, onEdit, onDelete, fields, showAlert }) => (
   <div className="grid grid-cols-12 items-center gap-4 rounded-lg border bg-white p-3">
     {fields.map((f, idx) => (
-      <div key={idx} className="col-span-2 truncate text-sm text-gray-800">{item[f] ?? '-'}</div>
+      <div key={idx} className="col-span-2 flex items-center gap-2 truncate text-sm text-gray-800">
+        {idx === 0 && showAlert ? (
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+        ) : null}
+        {String(item[f] ?? '-')}
+      </div>
     ))}
-    <div className="col-span-2 flex justify-end gap-2">
+    <div className="col-span-2 ml-auto flex justify-end gap-2">
       <button onClick={() => onEdit(item)} className="inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50">
         <Edit2 className="mr-1 h-4 w-4"/> Edit
       </button>
@@ -31,12 +36,15 @@ const SectionHeader = ({ title, actions }) => (
 );
 
 export default function App() {
-  // Authentication + navigation (hooks must be declared before any return)
+  // Authentication + navigation
   const [user, setUser] = useState(null);
   const [section, setSection] = useState('home');
 
   // Delivery module UI state
   const [deliveryTab, setDeliveryTab] = useState('Daily Entries');
+
+  // Stock module UI state
+  const [stockTab, setStockTab] = useState('Available Stock');
 
   // Demo data for Delivery
   const [suppliers, setSuppliers] = useState([
@@ -49,7 +57,18 @@ export default function App() {
     { supplier_id: 'S-1002', product_id: 'P-2002', expiry_date: '2025-12-01', quantity: 18, selling_price: 2.9, cost_price: 2.2 },
   ]);
 
-  // Dashboard demo data
+  // Stock demo data
+  const [available, setAvailable] = useState([
+    { product_id: 'P-2001', product_name: 'Gala Apples', quantity_available: 8, selling_price: 1.8, expiry_date: '2025-11-10' },
+    { product_id: 'P-2002', product_name: 'Whole Milk 1L', quantity_available: 42, selling_price: 2.9, expiry_date: '2025-11-30' },
+    { product_id: 'P-2003', product_name: 'Brown Bread', quantity_available: 5, selling_price: 1.2, expiry_date: '2025-11-08' },
+  ]);
+
+  const [expired, setExpired] = useState([
+    { product_id: 'P-1999', product_name: 'Yogurt Cup', quantity_expired: 6, loss: 9.0 },
+  ]);
+
+  // Dashboard demo data used for derived widgets
   const [stockItems] = useState([
     { product_id: 'P-2001', name: 'Gala Apples', quantity: 8, reorder_level: 10 },
     { product_id: 'P-2002', name: 'Whole Milk 1L', quantity: 42, reorder_level: 20 },
@@ -74,6 +93,17 @@ export default function App() {
   const emptyEntry = { supplier_id: '', product_id: '', expiry_date: '', quantity: 0, selling_price: 0, cost_price: 0 };
   const [entryForm, setEntryForm] = useState(emptyEntry);
 
+  // Stock modals state
+  const [availableModalOpen, setAvailableModalOpen] = useState(false);
+  const [editingAvailableId, setEditingAvailableId] = useState(null);
+  const emptyAvailable = { product_id: '', product_name: '', quantity_available: 0, selling_price: 0, expiry_date: '' };
+  const [availableForm, setAvailableForm] = useState(emptyAvailable);
+
+  const [expiredModalOpen, setExpiredModalOpen] = useState(false);
+  const [editingExpiredId, setEditingExpiredId] = useState(null);
+  const emptyExpired = { product_id: '', product_name: '', quantity_expired: 0, loss: 0 };
+  const [expiredForm, setExpiredForm] = useState(emptyExpired);
+
   // Derived dashboard values
   const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const expiringSoon = useMemo(() => {
@@ -86,6 +116,19 @@ export default function App() {
   }, [entries]);
   const lowStock = useMemo(() => stockItems.filter((s) => s.quantity <= s.reorder_level), [stockItems]);
   const todaysDeliveries = useMemo(() => deliveriesSchedule.filter((d) => d.eta_date === todayStr), [deliveriesSchedule, todayStr]);
+
+  // Stock row alerts: low stock or expiring in <= 3 days
+  const isStockAlert = (item) => {
+    const low = Number(item.quantity_available) <= 10;
+    let exp = false;
+    if (item.expiry_date) {
+      const now = new Date();
+      const inThree = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      const d = new Date(item.expiry_date);
+      exp = d <= inThree;
+    }
+    return low || exp;
+  };
 
   // Event handlers
   const handleLogout = () => {
@@ -153,6 +196,72 @@ export default function App() {
   const deleteEntry = (item) => {
     if (confirm(`Delete entry for product ${item.product_id}?`)) {
       setEntries((prev) => prev.filter((e) => e !== item));
+    }
+  };
+
+  // Available stock handlers
+  const openAddAvailable = () => {
+    setEditingAvailableId(null);
+    setAvailableForm(emptyAvailable);
+    setAvailableModalOpen(true);
+  };
+  const openEditAvailable = (item) => {
+    setEditingAvailableId(item.product_id);
+    setAvailableForm({ ...item });
+    setAvailableModalOpen(true);
+  };
+  const saveAvailable = () => {
+    if (!availableForm.product_id || !availableForm.product_name) return;
+    const normalized = {
+      ...availableForm,
+      quantity_available: Number(availableForm.quantity_available) || 0,
+      selling_price: Number(availableForm.selling_price) || 0,
+    };
+    setAvailable((prev) => {
+      const exists = prev.find((p) => p.product_id === normalized.product_id);
+      if (editingAvailableId || exists) {
+        return prev.map((p) => (p.product_id === (editingAvailableId || normalized.product_id) ? normalized : p));
+      }
+      return [...prev, normalized];
+    });
+    setAvailableModalOpen(false);
+  };
+  const deleteAvailable = (item) => {
+    if (confirm(`Delete available stock ${item.product_name}?`)) {
+      setAvailable((prev) => prev.filter((p) => p.product_id !== item.product_id));
+    }
+  };
+
+  // Expired stock handlers
+  const openAddExpired = () => {
+    setEditingExpiredId(null);
+    setExpiredForm(emptyExpired);
+    setExpiredModalOpen(true);
+  };
+  const openEditExpired = (item) => {
+    setEditingExpiredId(item.product_id);
+    setExpiredForm({ ...item });
+    setExpiredModalOpen(true);
+  };
+  const saveExpired = () => {
+    if (!expiredForm.product_id || !expiredForm.product_name) return;
+    const normalized = {
+      ...expiredForm,
+      quantity_expired: Number(expiredForm.quantity_expired) || 0,
+      loss: Number(expiredForm.loss) || 0,
+    };
+    setExpired((prev) => {
+      const exists = prev.find((p) => p.product_id === normalized.product_id);
+      if (editingExpiredId || exists) {
+        return prev.map((p) => (p.product_id === (editingExpiredId || normalized.product_id) ? normalized : p));
+      }
+      return [...prev, normalized];
+    });
+    setExpiredModalOpen(false);
+  };
+  const deleteExpired = (item) => {
+    if (confirm(`Delete expired stock ${item.product_name}?`)) {
+      setExpired((prev) => prev.filter((p) => p.product_id !== item.product_id));
     }
   };
 
@@ -350,6 +459,149 @@ export default function App() {
                     value={supplierForm.category}
                     onChange={(e) => setSupplierForm((f) => ({ ...f, category: e.target.value }))}
                     placeholder="Category"
+                    className="rounded-md border px-3 py-2 text-sm"
+                  />
+                </div>
+              </Modal>
+            </div>
+          )}
+        </SectionLayout>
+      );
+
+    case 'stock':
+      return (
+        <SectionLayout
+          title="Stock"
+          tabs={["Available Stock", "Expired Products"]}
+          activeTab={stockTab}
+          onTabChange={setStockTab}
+          onBackHome={goHome}
+          onLogout={handleLogout}
+        >
+          {stockTab === 'Available Stock' ? (
+            <div className="space-y-4">
+              <SectionHeader
+                title="Available Stock"
+                actions={(
+                  <button onClick={openAddAvailable} className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+                    <Plus className="h-4 w-4"/> Add Product
+                  </button>
+                )}
+              />
+              <div className="hidden lg:block text-xs text-gray-500">Columns: product_id, product name, quantity available, selling price, expiry date</div>
+              <div className="space-y-3">
+                {available.map((p) => (
+                  <Row
+                    key={p.product_id}
+                    item={p}
+                    fields={["product_id", "product_name", "quantity_available", "selling_price", "expiry_date"]}
+                    showAlert={isStockAlert(p)}
+                    onEdit={openEditAvailable}
+                    onDelete={deleteAvailable}
+                  />
+                ))}
+              </div>
+
+              <Modal
+                title={editingAvailableId ? 'Edit Product' : 'Add Product'}
+                isOpen={availableModalOpen}
+                onClose={() => setAvailableModalOpen(false)}
+                onSubmit={saveAvailable}
+                submitLabel={editingAvailableId ? 'Save Changes' : 'Create Product'}
+              >
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <input
+                    value={availableForm.product_id}
+                    onChange={(e) => setAvailableForm((f) => ({ ...f, product_id: e.target.value }))}
+                    placeholder="Product ID"
+                    className="rounded-md border px-3 py-2 text-sm"
+                  />
+                  <input
+                    value={availableForm.product_name}
+                    onChange={(e) => setAvailableForm((f) => ({ ...f, product_name: e.target.value }))}
+                    placeholder="Product Name"
+                    className="rounded-md border px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="number"
+                    value={availableForm.quantity_available}
+                    onChange={(e) => setAvailableForm((f) => ({ ...f, quantity_available: e.target.value }))}
+                    placeholder="Quantity Available"
+                    className="rounded-md border px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={availableForm.selling_price}
+                    onChange={(e) => setAvailableForm((f) => ({ ...f, selling_price: e.target.value }))}
+                    placeholder="Selling Price"
+                    className="rounded-md border px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="date"
+                    value={availableForm.expiry_date}
+                    onChange={(e) => setAvailableForm((f) => ({ ...f, expiry_date: e.target.value }))}
+                    className="rounded-md border px-3 py-2 text-sm"
+                  />
+                </div>
+              </Modal>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <SectionHeader
+                title="Expired Products"
+                actions={(
+                  <button onClick={openAddExpired} className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+                    <Plus className="h-4 w-4"/> Add Expired
+                  </button>
+                )}
+              />
+              <div className="hidden lg:block text-xs text-gray-500">Columns: product_id, product name, quantity expired, loss</div>
+              <div className="space-y-3">
+                {expired.map((p) => (
+                  <Row
+                    key={p.product_id}
+                    item={p}
+                    fields={["product_id", "product_name", "quantity_expired", "loss"]}
+                    onEdit={openEditExpired}
+                    onDelete={deleteExpired}
+                  />
+                ))}
+              </div>
+
+              <Modal
+                title={editingExpiredId ? 'Edit Expired Entry' : 'Add Expired Entry'}
+                isOpen={expiredModalOpen}
+                onClose={() => setExpiredModalOpen(false)}
+                onSubmit={saveExpired}
+                submitLabel={editingExpiredId ? 'Save Changes' : 'Create Entry'}
+              >
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <input
+                    value={expiredForm.product_id}
+                    onChange={(e) => setExpiredForm((f) => ({ ...f, product_id: e.target.value }))}
+                    placeholder="Product ID"
+                    className="rounded-md border px-3 py-2 text-sm"
+                  />
+                  <input
+                    value={expiredForm.product_name}
+                    onChange={(e) => setExpiredForm((f) => ({ ...f, product_name: e.target.value }))}
+                    placeholder="Product Name"
+                    className="rounded-md border px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="number"
+                    value={expiredForm.quantity_expired}
+                    onChange={(e) => setExpiredForm((f) => ({ ...f, quantity_expired: e.target.value }))}
+                    placeholder="Quantity Expired"
+                    className="rounded-md border px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={expiredForm.loss}
+                    onChange={(e) => setExpiredForm((f) => ({ ...f, loss: e.target.value }))}
+                    placeholder="Loss"
                     className="rounded-md border px-3 py-2 text-sm"
                   />
                 </div>
