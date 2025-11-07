@@ -3,6 +3,9 @@ import Login from './components/Login';
 import HomeDashboard from './components/HomeDashboard';
 import SectionLayout from './components/SectionLayout';
 import Modal from './components/Modal';
+import Employees from './components/Employees';
+import Sales from './components/Sales';
+import Billing from './components/Billing';
 import { Edit2, Trash2, Plus, AlertTriangle } from 'lucide-react';
 
 // Row item for list views with optional alert icon
@@ -610,6 +613,15 @@ export default function App() {
           )}
         </SectionLayout>
       );
+
+    case 'employees':
+      return <Employees onBackHome={goHome} onLogout={handleLogout} />;
+
+    case 'billing':
+      return <Billing onBackHome={goHome} onLogout={handleLogout} />;
+
+    case 'sales':
+      return <Sales onBackHome={goHome} onLogout={handleLogout} />;
 
     default:
       return <HomeDashboard onSelect={setSection} />;
