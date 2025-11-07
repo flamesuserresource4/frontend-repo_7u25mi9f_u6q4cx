@@ -1,95 +1,117 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import SectionLayout from './SectionLayout';
-import Modal from './Modal';
 
-export default function Billing({ onBackHome, onLogout }) {
-  const [tab, setTab] = useState('Build Bill');
-  const [items, setItems] = useState([{ product_id: 'P-2001', quantity: 1 }]);
+export default function Billing({ onBackHome, onLogout, user, onRoleChange }) {
+  const tabs = ['Build Bill', 'Receipt'];
+  const [activeTab, setActiveTab] = useState('Build Bill');
+  const [items, setItems] = useState([{ product_id: '', quantity: 1 }]);
   const [receipt, setReceipt] = useState(null);
-  const [loading, setLoading] = useState(false);
 
-  const addRow = () => setItems((prev) => [...prev, { product_id: '', quantity: 1 }]);
-  const removeRow = (idx) => setItems((prev) => prev.filter((_, i) => i !== idx));
+  const canAccess = ['admin','manager','cashier'].includes(user?.role);
+  if (!canAccess) {
+    return (
+      <SectionLayout title="Billing" onBackHome={onBackHome} onLogout={onLogout} user={user} onRoleChange={onRoleChange}>
+        <div className="bg-white border rounded-xl p-6 text-emerald-800">You do not have access to Billing.</div>
+      </SectionLayout>
+    );
+  }
+
+  const addRow = () => setItems(prev => [...prev, { product_id: '', quantity: 1 }]);
+  const removeRow = (idx) => setItems(prev => prev.filter((_,i)=>i!==idx));
+  const updateRow = (idx, key, val) => setItems(prev => prev.map((r,i)=> i===idx ? { ...r, [key]: val } : r));
 
   const makeBill = async () => {
     try {
-      setLoading(true);
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || ''}/billing/price`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/billing/price`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: items.map((i) => ({ product_id: i.product_id, quantity: Number(i.quantity)||0 })) }),
+        body: JSON.stringify({ items })
       });
       const data = await res.json();
       setReceipt(data);
+      setActiveTab('Receipt');
     } catch (e) {
       console.error(e);
-      alert('Failed to fetch prices');
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
     <SectionLayout
       title="Billing"
-      tabs={["Build Bill", receipt ? "Receipt" : null].filter(Boolean)}
-      activeTab={tab}
-      onTabChange={setTab}
+      tabs={tabs}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
       onBackHome={onBackHome}
       onLogout={onLogout}
+      user={user}
+      onRoleChange={onRoleChange}
     >
-      {tab === 'Build Bill' ? (
-        <div className="space-y-4">
-          <div className="mb-2 text-sm text-gray-600">Enter product ID and quantity, then click Make Bill to fetch prices and generate the final receipt.</div>
-          <div className="space-y-2">
+      {activeTab === 'Build Bill' && (
+        <div className="bg-white border border-emerald-100 rounded-xl p-4">
+          <div className="mb-4">
+            <div className="text-sm text-emerald-600">Enter Items</div>
+            <h3 className="text-lg font-semibold text-emerald-900">Build Bill</h3>
+          </div>
+          <div className="space-y-3">
             {items.map((row, idx) => (
-              <div key={idx} className="flex items-center gap-2 rounded-lg border bg-white p-3">
-                <input
-                  value={row.product_id}
-                  onChange={(e) => setItems((prev) => prev.map((r, i) => i===idx ? { ...r, product_id: e.target.value } : r))}
-                  placeholder="Product ID"
-                  className="flex-1 rounded-md border px-3 py-2 text-sm"
-                />
-                <input
-                  type="number"
-                  min={1}
-                  value={row.quantity}
-                  onChange={(e) => setItems((prev) => prev.map((r, i) => i===idx ? { ...r, quantity: e.target.value } : r))}
-                  placeholder="Qty"
-                  className="w-28 rounded-md border px-3 py-2 text-sm"
-                />
-                <button onClick={() => removeRow(idx)} className="rounded-md border px-3 py-2 text-sm">Remove</button>
+              <div key={idx} className="grid grid-cols-12 gap-3">
+                <div className="col-span-5">
+                  <label className="text-xs text-emerald-700">Product ID</label>
+                  <input value={row.product_id} onChange={(e)=>updateRow(idx, 'product_id', e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2 text-sm" placeholder="e.g., P001" />
+                </div>
+                <div className="col-span-3">
+                  <label className="text-xs text-emerald-700">Quantity</label>
+                  <input type="number" value={row.quantity} onChange={(e)=>updateRow(idx, 'quantity', Number(e.target.value))} className="mt-1 w-full border rounded-md px-3 py-2 text-sm" />
+                </div>
+                <div className="col-span-4 flex items-end gap-2">
+                  <button onClick={()=>removeRow(idx)} className="px-3 py-2 rounded-md border text-red-700 border-red-200">Remove</button>
+                  {idx === items.length - 1 && (
+                    <button onClick={addRow} className="px-3 py-2 rounded-md border text-emerald-700 border-emerald-200">Add Row</button>
+                  )}
+                </div>
               </div>
             ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={addRow} className="rounded-md border px-3 py-2 text-sm">Add Item</button>
-            <button onClick={makeBill} disabled={loading} className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60">
-              {loading ? 'Making Bill...' : 'Make Bill'}
-            </button>
+            <div>
+              <button onClick={makeBill} className="mt-2 px-4 py-2 rounded-md bg-emerald-600 text-white hover:bg-emerald-700">Make Bill</button>
+            </div>
           </div>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {receipt ? (
-            <div className="rounded-xl border bg-white p-4">
-              <h3 className="mb-3 text-lg font-semibold">Receipt</h3>
-              <div className="space-y-2">
-                {receipt.lines?.map((l, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <span className="text-gray-700">{l.product_id} × {l.quantity}</span>
-                    <span className="font-medium">${l.line_total.toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 h-px w-full bg-gray-100" />
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-sm font-semibold text-gray-700">Total</span>
-                <span className="text-lg font-bold">${Number(receipt.total || 0).toFixed(2)}</span>
-              </div>
-            </div>
+      )}
+
+      {activeTab === 'Receipt' && (
+        <div className="bg-white border border-emerald-100 rounded-xl p-4">
+          <div className="mb-3">
+            <div className="text-sm text-emerald-600">Receipt</div>
+            <h3 className="text-lg font-semibold text-emerald-900">Summary</h3>
+          </div>
+          {!receipt ? (
+            <p className="text-sm text-emerald-700">No receipt yet. Build a bill first.</p>
           ) : (
-            <div className="text-sm text-gray-600">No receipt yet. Build a bill first.</div>
+            <div className="text-sm">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-emerald-700">
+                      <th className="py-2">Product ID</th>
+                      <th className="py-2">Quantity</th>
+                      <th className="py-2">Unit Price</th>
+                      <th className="py-2">Line Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {receipt.lines.map((l, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="py-2">{l.product_id}</td>
+                        <td className="py-2">{l.quantity}</td>
+                        <td className="py-2">₹{l.unit_price}</td>
+                        <td className="py-2">₹{l.line_total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-3 text-right text-emerald-900 font-semibold">Grand Total: ₹{receipt.total}</div>
+            </div>
           )}
         </div>
       )}

@@ -1,48 +1,28 @@
 import React from 'react';
-import { Truck, Boxes, Users, Receipt, LayoutDashboard, BarChart3 } from 'lucide-react';
+import { BarChart3, Package, Users, ShoppingCart } from 'lucide-react';
 
-const features = [
-  { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'from-emerald-600 to-teal-500' },
-  { key: 'delivery', label: 'Delivery', icon: Truck, color: 'from-blue-500 to-cyan-500' },
-  { key: 'stock', label: 'Stock', icon: Boxes, color: 'from-emerald-500 to-teal-500' },
-  { key: 'employees', label: 'Employees', icon: Users, color: 'from-purple-500 to-fuchsia-500' },
-  { key: 'sales', label: 'Sales', icon: BarChart3, color: 'from-amber-500 to-orange-500' },
-  { key: 'billing', label: 'Billing', icon: Receipt, color: 'from-rose-500 to-pink-500' },
-];
+export default function HomeDashboard({ onNavigate }) {
+  const cards = [
+    { key: 'Delivery', label: 'Delivery', icon: Package },
+    { key: 'Stock', label: 'Stock', icon: BarChart3 },
+    { key: 'Employees', label: 'Employees', icon: Users },
+    { key: 'Billing', label: 'Billing', icon: ShoppingCart },
+    { key: 'Sales', label: 'Sales', icon: BarChart3 },
+  ];
 
-const HomeDashboard = ({ onSelect }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white">
-      <div className="mx-auto max-w-7xl px-4 py-10">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-extrabold tracking-wide text-emerald-700">FRESH PICK</h1>
-          <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-emerald-700/80">smart management, seamless operations</p>
-          <p className="mt-4 text-gray-700">Choose a module to manage daily operations</p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map(({ key, label, icon: Icon, color }) => (
-            <button
-              key={key}
-              onClick={() => onSelect(key)}
-              className={`group rounded-2xl border bg-white p-6 shadow-sm transition hover:shadow-md`}
-            >
-              <div className={`mb-4 inline-flex rounded-xl bg-gradient-to-br ${color} p-3 text-white`}>
-                <Icon className="h-6 w-6" />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{label}</h3>
-                  <p className="mt-1 text-sm text-gray-600">Open the {label.toLowerCase()} module</p>
-                </div>
-                <span className="text-2xl transition-transform group-hover:translate-x-1">→</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {cards.map((c) => (
+        <button key={c.key} onClick={() => onNavigate(c.key)} className="group bg-white p-5 rounded-xl border border-emerald-100 hover:shadow-md transition flex items-center gap-4">
+          <div className="h-12 w-12 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+            <c.icon />
+          </div>
+          <div className="text-left">
+            <div className="text-sm text-emerald-600">Module</div>
+            <div className="text-lg font-semibold text-emerald-900">{c.label}</div>
+          </div>
+        </button>
+      ))}
     </div>
   );
-};
-
-export default HomeDashboard;
+}
